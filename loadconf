@@ -1,0 +1,22 @@
+#!/bin/bash
+
+if [ -z "$1" ];then
+	echo "错误：请输入需要载入的路由器型号！"
+	exit -1
+fi
+
+if [ ! -f "./crwconfig/$1.config" ]; then
+	echo "错误：不存在名称为 $1 路由器配置文件，请新建配置文件！"
+	exit -1
+fi
+
+cp ./crwconfig/"$1".config .config
+rm -rf ./files/
+cp -r ./crwconfig/files_common/ ./files/
+if [ -d ./crwconfig/files_"$1" ]; then
+	cp -r ./crwconfig/files_"$1"/* ./files/
+fi
+
+echo "$1 路由器配置载入成功！"
+
+exit 0
