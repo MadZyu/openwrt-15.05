@@ -1,0 +1,26 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Adbyby"
+msgstr "Adbyby"
+
+msgid "A powerful advertisement blocker"
+msgstr "一个强大的广告屏蔽工具"
+
+msgid "Running Status"
+msgstr "运行状态"
+
+msgid "Transparent Proxy"
+msgstr "透明代理"
+
+msgid "RUNNING"
+msgstr "运行中"
+
+msgid "NOT RUNNING"
+msgstr "未运行"
+
+msgid "Global Setting"
+msgstr "服务配置"
+
+msgid "Enable"
+msgstr "启用"

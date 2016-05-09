@@ -1,0 +1,77 @@
+#!/bin/sh /etc/rc.common
+#
+# Copyright (C) 2015 OpenWrt-dist
+# Copyright (C) 2016 Chen RuiWei <crwbak@gmail.com>
+#
+# This is free software, licensed under the GNU General Public License v3.
+# See /LICENSE for more information.
+#
+
+START=90
+STOP=15
+
+CONFIG=adbyby
+
+uci_get_by_name() {
+	local ret=$(uci get $CONFIG.$1.$2 2>/dev/null)
+	echo ${ret:=$3}
+}
+
+uci_get_by_type() {
+	local ret=$(uci get $CONFIG.@$1[0].$2 2>/dev/null)
+	echo ${ret:=$3}
+}
+
+iptables_ext() {
+	iptables -t nat -C $2 $3 2>/dev/null
+	local ret=$?
+	if [ "$ret" -ne 0 ];then
+		iptables -t nat -$1 $2 $3 2>/dev/null
+	fi
+}
+
+isDisabled() {
+	case "$(uci_get_by_type global enabled)" in
+		1|on|true|yes|enabled) echo "[ 1 -eq 0 ]";;
+		*) echo "[ 1 -eq 1 ]";;
+	esac
+}
+
+add_rule() {
+	$(isDisabled) && exit 0
+	IPSET=$(uci_get_by_type global ipset)
+	iptables -t nat -N ADBYBY 2>/dev/null
+	iptables_ext I PREROUTING "-j ADBYBY"
+	if [ -n "$IPSET" ]; then
+		ipset -! create $IPSET iphash
+		ipset -! add $IPSET 100.100.100.100
+		iptables_ext A ADBYBY "-p tcp --dport 80 -m set --match-set $IPSET dst -j REDIRECT --to 8118"
+	else
+		iptables_ext A ADBYBY "-d 0.0.0.0/8 -j RETURN"
+		iptables_ext A ADBYBY "-d 10.0.0.0/8 -j RETURN"
+		iptables_ext A ADBYBY "-d 127.0.0.0/8 -j RETURN"
+		iptables_ext A ADBYBY "-d 169.254.0.0/16 -j RETURN"
+		iptables_ext A ADBYBY "-d 172.16.0.0/12 -j RETURN"
+		iptables_ext A ADBYBY "-d 192.168.0.0/16 -j RETURN"
+		iptables_ext A ADBYBY "-d 224.0.0.0/4 -j RETURN"
+		iptables_ext A ADBYBY "-d 240.0.0.0/4 -j RETURN"
+		iptables_ext A ADBYBY "-p tcp --dport 80 -j REDIRECT --to 8118"
+	fi
+}
+
+del_rule() {
+	iptables -t nat -D PREROUTING -j ADBYBY 2>/dev/null
+	iptables -t nat -F ADBYBY 2>/dev/null
+	iptables -t nat -X ADBYBY 2>/dev/null
+}
+
+start() {
+	$(isDisabled) && exit 0
+	/usr/share/adbyby/adbyby >/dev/null 2>&1 &
+	add_rule
+}
+
+stop() {
+	del_rule
+	kill -9 $(ps|grep '/usr/share/adbyby/adbyby'|grep -v 'grep'|awk '{print$1}')
+}
