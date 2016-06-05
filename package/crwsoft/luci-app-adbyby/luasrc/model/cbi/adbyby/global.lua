@@ -60,7 +60,11 @@ o = s:option(Flag, "enabled", translate("Enable"))
 o.default = 0
 o.rmempty = false
 
-o = s:option(Value, "ipset", translate("IPSet"))
-o.default = ""
+o = s:option(ListValue, "filter_mode", translate("Filter Mode"))
+o.default = "adblock"
+o.rmempty = false
+o:reset_values()
+o:value("global", translate("Global Filter"))
+o:value("adblock", translate("AdBlock Filter"))
 
 return m

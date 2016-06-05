@@ -24,3 +24,13 @@ msgstr "服务配置"
 
 msgid "Enable"
 msgstr "启用"
+
+msgid "Filter Mode"
+msgstr "过滤模式"
+
+msgid "Global Filter"
+msgstr "全局模式"
+
+msgid "AdBlock Filter"
+msgstr "黑名单模式"
+
