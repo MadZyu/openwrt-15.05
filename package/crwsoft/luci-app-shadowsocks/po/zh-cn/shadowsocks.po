@@ -32,7 +32,7 @@ msgid "Current Server"
 msgstr "当前服务器"
 
 msgid "Proxy Mode"
-msgstr "UDP服务器"
+msgstr "代理模式"
 
 msgid "Global Proxy"
 msgstr "全局代理"
