@@ -10,7 +10,6 @@
 		{
 			var status = document.getElementsByClassName('shadowsocks_status');
 			status[0].innerHTML = result.ss_redir?'<%=translate("RUNNING")%>':'<%=translate("NOT RUNNING")%>';
-			status[1].innerHTML = result.ss_tunnel?'<%=translate("RUNNING")%>':'<%=translate("NOT RUNNING")%>';
 		}
 	);
 	var pings = document.getElementsByClassName('pingtime');

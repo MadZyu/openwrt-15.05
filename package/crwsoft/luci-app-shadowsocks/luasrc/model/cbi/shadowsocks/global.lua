@@ -60,10 +60,6 @@ o = s:option(DummyValue, "ss_redir_status", translate("Transparent Proxy"))
 o.template = "shadowsocks/dvalue"
 o.value = translate("Collecting data...")
 
-o = s:option(DummyValue, "ss_tunnel_status", translate("UDP Forward"))
-o.template = "shadowsocks/dvalue"
-o.value = translate("Collecting data...")
-
 -- [[ Global Setting ]]--
 s = m:section(TypedSection, "global", translate("Global Setting"))
 s.anonymous = true
@@ -72,26 +68,26 @@ o = s:option(ListValue, "global_server", translate("Current Server"))
 o.default = "nil"
 o.rmempty = false
 o:reset_values()
-o:value("nil", translate("Disable ShadowSocks"))
+o:value("nil", translate("Disable"))
 for k, v in pairs(server_table) do o:value(k, v) end
 
-o = s:option(Value, "ipset", translate("IPSet"))
-o.default = ""
-
--- [[ UDP Forward ]]--
-s = m:section(TypedSection, "udp_forward", translate("UDP Forward"))
-s.anonymous = true
-
-o = s:option(Flag, "tunnel_enable", translate("Enable"))
-o.default = 1
+o = s:option(ListValue, "proxy_mode", translate("Proxy Mode"))
+o.default = "gfwlist"
 o.rmempty = false
+o:reset_values()
+o:value("global", translate("Global Proxy"))
+o:value("gfwlist", translate("GFW List"))
 
-o = s:option(Value, "tunnel_port", translate("UDP Local Port"))
-o.datatype = "port"
-o.default = 5300
+o = s:option(ListValue, "dns_mode", translate("DNS Forward Mode"))
+o.default = "dns2socks"
 o.rmempty = false
+o:reset_values()
+if is_installed("dns2socks") then
+	o:value("dns2socks", "dns2socks")
+end
+o:value("ss-tunnel", "ss-tunnel")
 
-o = s:option(Value, "tunnel_forward", translate("Forwarding Tunnel"))
+o = s:option(Value, "dns_forward", translate("DNS Forward Address"))
 o.default = "8.8.8.8:53"
 o.rmempty = false
 

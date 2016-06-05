@@ -16,17 +16,14 @@ msgstr "停用"
 msgid "Running Status"
 msgstr "运行状态"
 
-msgid "Transparent Proxy"
-msgstr "透明代理"
-
-msgid "UDP Forward"
-msgstr "UDP转发"
-
 msgid "RUNNING"
 msgstr "运行中"
 
 msgid "NOT RUNNING"
 msgstr "未运行"
+
+msgid "Transparent Proxy"
+msgstr "透明代理"
 
 msgid "Global Setting"
 msgstr "服务配置"
@@ -34,11 +31,20 @@ msgstr "服务配置"
 msgid "Current Server"
 msgstr "当前服务器"
 
-msgid "Disable ShadowSocks"
-msgstr "停用ShadowSocks"
-
-msgid "UDP-Relay Server"
+msgid "Proxy Mode"
 msgstr "UDP服务器"
+
+msgid "Global Proxy"
+msgstr "全局代理"
+
+msgid "GFW List"
+msgstr "GFW名单"
+
+msgid "DNS Forward Mode"
+msgstr "DNS转发模式"
+
+msgid "DNS Forward Address"
+msgstr "DNS转发地址"
 
 msgid "Servers List"
 msgstr "服务器列表"
@@ -63,12 +69,6 @@ msgstr "密码"
 
 msgid "Encrypt Method"
 msgstr "加密方式"
-
-msgid "UDP Local Port"
-msgstr "UDP本地端口"
-
-msgid "Forwarding Tunnel"
-msgstr "UDP转发地址"
 
 msgid "Ping Latency"
 msgstr "Ping 延迟"

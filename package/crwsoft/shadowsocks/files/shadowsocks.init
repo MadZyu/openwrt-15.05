@@ -31,16 +31,6 @@ iptables_ext() {
 	fi
 }
 
-GLOBAL_SERVER=$(uci_get_by_type global global_server nil)
-
-isDisabled() {
-	if [ "$GLOBAL_SERVER" = "nil" ]; then
-		echo  "[ 1 -eq 1 ]"
-	else
-		echo "[ 1 -eq 0 ]"
-	fi
-}
-
 gen_config_file() {
 	cat <<-EOF >$CONFIG_FILE
 		{
@@ -55,73 +45,75 @@ gen_config_file() {
 EOF
 }
 
-start_redir() {
-	$(isDisabled) && exit 0
-	mkdir -p /var/run /var/etc
-	UDP_RELAY_SERVER=$(uci_get_by_type global udp_relay_server)
-	[ "$UDP_RELAY_SERVER" = "same" ] && UDP_RELAY_SERVER=$GLOBAL_SERVER
-	
-	local server=$(uci_get_by_name $GLOBAL_SERVER server)
-	local local_port=$(uci_get_by_name $GLOBAL_SERVER local_port)
-	if [ "$GLOBAL_SERVER" = "$UDP_RELAY_SERVER" ]; then
-		ARG_UDP="-u"
-	elif [ -n "$UDP_RELAY_SERVER" ]; then
-		ARG_UDP="-U"
-		local udp_server=$(uci_get_by_name $UDP_RELAY_SERVER server)
-		local udp_local_port=$(uci_get_by_name $UDP_RELAY_SERVER local_port)
+load_config() {
+	GLOBAL_SERVER=$(uci_get_by_type global global_server nil)
+	if [ $GLOBAL_SERVER = "nil" ]; then
+		return $([ 1 -eq 0 ])
 	fi
+	PROXY_MODE=$(uci_get_by_type global proxy_mode gfwlist)
+	DNS_MODE=$(uci_get_by_type global dns_mode ss-tunnel)
+	DNS_FORWARD=$(uci_get_by_type global dns_forward 8.8.8.8:53)
+
+	LOCAL_PORT=$(uci_get_by_name $GLOBAL_SERVER local_port)
 	case "$(uci_get_by_name $GLOBAL_SERVER auth_enable)" in
 		1|on|true|yes|enabled) ARG_OTA="-A";;
 		*) ARG_OTA="";;
 	esac
 	gen_config_file $GLOBAL_SERVER
-	if [ "$ARG_UDP" = "-U" ]; then
-		/usr/bin/ss-redir \
-		-c $CONFIG_FILE $ARG_OTA \
-		-f /var/run/ss-redir-tcp.pid
-		case "$(uci_get_by_name $UDP_RELAY_SERVER auth_enable)" in
-			1|on|true|yes|enabled) ARG_OTA="-A";;
-			*) ARG_OTA="";;
-		esac
-		gen_config_file $UDP_RELAY_SERVER
-	fi
-	/usr/bin/ss-redir \
-	-c $CONFIG_FILE $ARG_OTA $ARG_UDP \
-	-f /var/run/ss-redir.pid
-	return $?
+	return $([ 1 -eq 1 ])
 }
 
-start_tunnel() {
-	case "$(uci_get_by_type udp_forward tunnel_enable)" in
-		1|on|true|yes|enabled)
+start_redir() {
+	mkdir -p /var/run /var/etc
+	/usr/bin/ss-redir \
+	-c $CONFIG_FILE $ARG_OTA \
+	-f /var/run/ss-redir.pid
+}
+
+start_dns() {
+	case "$DNS_MODE" in
+		ss-tunnel)
 			/usr/bin/ss-tunnel \
 			-c $CONFIG_FILE $ARG_OTA ${ARG_UDP:="-u"} \
-			-l $(uci_get_by_type udp_forward tunnel_port 5300) \
-			-L $(uci_get_by_type udp_forward tunnel_forward 8.8.8.8:53) \
+			-l 5300 \
+			-L $DNS_FORWARD \
 			-f /var/run/ss-tunnel.pid
+		;;
+		dns2socks)
+			/usr/bin/ss-local \
+			-c $CONFIG_FILE $ARG_OTA \
+			-f /var/run/ss-local.pid \
+			-l 1081
+			/usr/bin/dns2socks \
+			127.0.0.1:1081 \
+			$DNS_FORWARD \
+			127.0.0.1:5300 \
+			>/dev/null 2>&1 &
+		;;
 	esac
 }
 
 add_rule() {
-	$(isDisabled) && exit 0
-	IPSET=$(uci_get_by_type global ipset)
-	local_port=$(uci_get_by_name $GLOBAL_SERVER local_port)
+	IPSET="vpn"
 	iptables -t nat -N SHADOWSOCKS 2>/dev/null
 	iptables_ext I PREROUTING "-j SHADOWSOCKS"
-	if [ -n "$IPSET" ]; then
-		ipset -! create $IPSET iphash
-		iptables_ext A SHADOWSOCKS "-p tcp -m set --match-set $IPSET dst -j REDIRECT --to $local_port"
-	else
-		iptables_ext A SHADOWSOCKS "-d 0.0.0.0/8 -j RETURN"
-		iptables_ext A SHADOWSOCKS "-d 10.0.0.0/8 -j RETURN"
-		iptables_ext A SHADOWSOCKS "-d 127.0.0.0/8 -j RETURN"
-		iptables_ext A SHADOWSOCKS "-d 169.254.0.0/16 -j RETURN"
-		iptables_ext A SHADOWSOCKS "-d 172.16.0.0/12 -j RETURN"
-		iptables_ext A SHADOWSOCKS "-d 192.168.0.0/16 -j RETURN"
-		iptables_ext A SHADOWSOCKS "-d 224.0.0.0/4 -j RETURN"
-		iptables_ext A SHADOWSOCKS "-d 240.0.0.0/4 -j RETURN"
-		iptables_ext A SHADOWSOCKS "-p tcp -j REDIRECT --to $local_port"
-	fi
+	case "$PROXY_MODE" in
+		gfwlist)
+			ipset -! create $IPSET iphash
+			iptables_ext A SHADOWSOCKS "-p tcp -m set --match-set $IPSET dst -j REDIRECT --to $LOCAL_PORT"
+			;;
+		global)
+			iptables_ext A SHADOWSOCKS "-d 0.0.0.0/8 -j RETURN"
+			iptables_ext A SHADOWSOCKS "-d 10.0.0.0/8 -j RETURN"
+			iptables_ext A SHADOWSOCKS "-d 127.0.0.0/8 -j RETURN"
+			iptables_ext A SHADOWSOCKS "-d 169.254.0.0/16 -j RETURN"
+			iptables_ext A SHADOWSOCKS "-d 172.16.0.0/12 -j RETURN"
+			iptables_ext A SHADOWSOCKS "-d 192.168.0.0/16 -j RETURN"
+			iptables_ext A SHADOWSOCKS "-d 224.0.0.0/4 -j RETURN"
+			iptables_ext A SHADOWSOCKS "-d 240.0.0.0/4 -j RETURN"
+			iptables_ext A SHADOWSOCKS "-p tcp -j REDIRECT --to $LOCAL_PORT"
+		;;
+	esac
 }
 
 del_rule() {
@@ -131,8 +123,9 @@ del_rule() {
 }
 
 start() {
+	! load_config && exit 0
 	start_redir
-	start_tunnel
+	start_dns
 	add_rule
 }
 
@@ -140,4 +133,6 @@ stop() {
 	del_rule
 	killall -q -9 ss-redir
 	killall -q -9 ss-tunnel
+	killall -q -9 ss-local
+	killall -q -9 dns2socks
 }
